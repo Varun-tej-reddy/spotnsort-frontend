@@ -1,0 +1,146 @@
+/* main.css - Black / White / Yellow theme with bubbles */
+
+/* Global styles */
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Arial', sans-serif;
+  background-color: transparent; /* changed from #000 so bubbles show */
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: #fff;
+}
+
+/* Bubbles Background */
+.bubbles-bg {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  z-index: -1; /* behind everything */
+}
+
+.bubble {
+  position: absolute;
+  bottom: -100px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  animation: rise 6s linear infinite;
+}
+
+/* Different bubble positions & sizes */
+.bubble:nth-child(1) { left: 5%; animation-duration: 5s; width: 15px; height: 15px; }
+.bubble:nth-child(2) { left: 15%; animation-duration: 6s; width: 20px; height: 20px; }
+.bubble:nth-child(3) { left: 25%; animation-duration: 7s; width: 25px; height: 25px; }
+.bubble:nth-child(4) { left: 35%; animation-duration: 5.5s; width: 18px; height: 18px; }
+.bubble:nth-child(5) { left: 50%; animation-duration: 6.5s; width: 22px; height: 22px; }
+.bubble:nth-child(6) { left: 65%; animation-duration: 7s; width: 20px; height: 20px; }
+.bubble:nth-child(7) { left: 75%; animation-duration: 5.2s; width: 18px; height: 18px; }
+.bubble:nth-child(8) { left: 85%; animation-duration: 6.8s; width: 25px; height: 25px; }
+
+/* Bubble animation */
+@keyframes rise {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-120vh) scale(0.5); opacity: 0; }
+}
+
+/* Page wrapper for content above bubbles */
+.page-wrapper {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  padding: 20px;
+  z-index: 1; /* above bubbles */
+}
+
+/* Section spacing */
+section {
+  width: 100%;
+  padding: 80px 20px;
+  margin-bottom: 40px;
+}
+
+/* Headings */
+h1, h2, h3, h4, p, label {
+  color: #ffffff;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  font-weight: bold;
+  border: 2px solid #FFD700;
+  border-radius: 6px;
+  padding: 10px 20px;
+  background-color: #FFD700;
+  color: #000;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background-color: #fff;
+  color: #FFD700;
+  transform: scale(1.05);
+}
+
+/* Input fields */
+input, select, textarea {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #FFD700;
+  background-color: #fff;
+  color: #000;
+  width: 100%;
+  margin: 5px 0;
+  outline: none;
+  z-index: 2;
+}
+
+/* Forms */
+.form-container {
+  background: rgba(0,0,0,0.85); /* semi-transparent black overlay */
+  padding: 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  z-index: 2;
+}
+
+/* Cards */
+.card {
+  background: rgba(0,0,0,0.6);
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  margin: 10px 0;
+}
+
+/* Analytics chart container */
+.chart-container {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  height: 400px;
+}
+
+/* Footer */
+footer {
+  background-color: rgba(0,0,0,0.8);
+  padding: 20px;
+  text-align: center;
+  z-index: 1;
+}
