@@ -1,3 +1,3 @@
 // client/src/config.js
-export const API_BASE_URL = "https://spotnsort-backend.onrender.com/api";
-
+export const API_BASE_URL =
+  "https://spotnsort-backend-29mb.onrender.com/api";
