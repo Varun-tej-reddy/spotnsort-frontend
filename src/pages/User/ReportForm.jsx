@@ -1,8 +1,9 @@
-// src/pages/ReportForm.jsx
+// src/pages/User/ReportForm.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaCamera, FaUpload } from "react-icons/fa";
 import BubblesBackground from "../../components/BubblesBackground";
+import { API_BASE_URL } from "../../config";   // ✅ IMPORTANT
 
 export default function ReportForm() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function ReportForm() {
     { label: "Lack of Public Amenities", subtypes: ["Benches", "Public toilets", "Bus shelters"] },
   ];
 
-  // ✅ Load user info from localStorage when page opens
+  // Load logged user
   useEffect(() => {
     const cur = JSON.parse(localStorage.getItem("spotnsort_current_user"));
     if (!cur) {
@@ -41,7 +42,7 @@ export default function ReportForm() {
     } else {
       setUser(cur);
       setName(cur.name || "");
-      setPhone(cur.phone || ""); // ✅ Auto-fill phone if present
+      setPhone(cur.phone || "");
     }
   }, [navigate]);
 
@@ -65,18 +66,9 @@ export default function ReportForm() {
     }
   };
 
-  const handleAreaChange = (e) => {
-    const value = e.target.value;
-    setArea(value);
-    if (!useCurrentLocation) {
-      setLat(null);
-      setLng(null);
-    }
-  };
-
   const handleLocationCheckbox = async () => {
     if (!navigator.geolocation) {
-      alert("Geolocation not supported. Please enter manually.");
+      alert("Geolocation not supported.");
       return;
     }
 
@@ -90,10 +82,7 @@ export default function ReportForm() {
         setArea(`Lat: ${pos.coords.latitude.toFixed(5)}, Lng: ${pos.coords.longitude.toFixed(5)}`);
         setUseCurrentLocation(true);
       } catch {
-        alert("Unable to fetch current location. Please enter manually.");
-        setUseCurrentLocation(false);
-        setLat(null);
-        setLng(null);
+        alert("Unable to fetch location.");
       }
     } else {
       setUseCurrentLocation(false);
@@ -101,43 +90,6 @@ export default function ReportForm() {
       setLng(null);
       setArea("");
     }
-  };
-
-  const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      alert("Camera not supported.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoRef.current.srcObject = stream;
-      videoRef.current.play();
-      setStreaming(true);
-    } catch (err) {
-      alert("Could not access camera: " + err.message);
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!streaming) return;
-    const width = videoRef.current.videoWidth;
-    const height = videoRef.current.videoHeight;
-    canvasRef.current.width = width;
-    canvasRef.current.height = height;
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.drawImage(videoRef.current, 0, 0, width, height);
-    setPhotoData(canvasRef.current.toDataURL("image/jpeg", 0.9));
-    videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-    videoRef.current.srcObject = null;
-    setStreaming(false);
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setStreaming(false);
   };
 
   const handleFile = (e) => {
@@ -148,10 +100,34 @@ export default function ReportForm() {
     reader.readAsDataURL(file);
   };
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+      setStreaming(true);
+    } catch {
+      alert("Camera not accessible.");
+    }
+  };
+
+  const capturePhoto = () => {
+    const width = videoRef.current.videoWidth;
+    const height = videoRef.current.videoHeight;
+    canvasRef.current.width = width;
+    canvasRef.current.height = height;
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.drawImage(videoRef.current, 0, 0, width, height);
+    setPhotoData(canvasRef.current.toDataURL("image/jpeg", 0.9));
+    videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+    setStreaming(false);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+
     if (!problem || !subtype || !priority || !description || !area || !photoData) {
-      alert("Please fill all mandatory fields and provide a photo.");
+      alert("Fill all required fields.");
       return;
     }
 
@@ -177,205 +153,86 @@ export default function ReportForm() {
       lat: finalLat,
       lng: finalLng,
       photo: photoData,
-      status: "Pending",
-      createdAt: new Date().toISOString(),
     };
 
     try {
-      const res = await fetch("https://spotnsort-backend.onrender.com/api/reports", {
+      const res = await fetch(`${API_BASE_URL}/reports`, {   // ✅ FIXED HERE
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReport),
       });
 
-      if (!res.ok) throw new Error("Failed to submit report");
+      if (!res.ok) throw new Error();
 
       alert("Report submitted successfully!");
-      setProblem("");
-      setSubtype("");
-      setPriority("");
-      setDescription("");
-      setPhotoData(null);
-      if (!useCurrentLocation) setArea("");
-      setLat(null);
-      setLng(null);
       navigate("/user/home");
-    } catch (err) {
-      console.error(err);
-      alert("Error submitting report. Try again.");
+    } catch {
+      alert("Error submitting report.");
     }
   };
 
   return (
-    <div className="relative min-h-screen text-white overflow-y-auto scroll-smooth">
+    <div className="relative min-h-screen text-white overflow-y-auto">
       <BubblesBackground />
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 w-full z-50">
-        <nav className="flex items-center px-8 py-4 bg-black bg-opacity-40 backdrop-blur-sm shadow-md">
-          <button
-            onClick={() => navigate("/user/home")}
-            className="text-black text-2xl font-bold hover:scale-110 transition bg-yellow-400 px-3 py-1 rounded-md border border-yellow-500 mr-4"
-          >
-            ←
-          </button>
-          <h1 className="text-3xl font-extrabold text-yellow-400">Report an Issue</h1>
-        </nav>
-      </header>
-
       <section className="pt-32 pb-24 px-6 w-full max-w-3xl mx-auto relative z-10">
-        <form
-          onSubmit={submit}
-          className="flex flex-col gap-4 bg-white bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl shadow-xl border border-white/10"
-        >
-          {/* Problem & Subtype */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select
-              value={problem}
-              onChange={(e) => {
-                setProblem(e.target.value);
-                setSubtype("");
-              }}
-              className="p-3 rounded bg-transparent border border-gray-400 text-white"
-              required
-            >
-              <option value="">-- Select Problem --</option>
-              {problemOptions.map((p, i) => (
-                <option key={i} value={p.label}>{p.label}</option>
-              ))}
-            </select>
+        <form onSubmit={submit} className="flex flex-col gap-4 bg-white/10 p-8 rounded-2xl">
 
-            <select
-              value={subtype}
-              onChange={(e) => setSubtype(e.target.value)}
-              className="p-3 rounded bg-transparent border border-gray-400 text-white"
-              required
-            >
-              <option value="">-- Select Subtype --</option>
-              {problemOptions.find((p) => p.label === problem)?.subtypes.map((st, idx) => (
-                <option key={idx} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
+          <select value={problem} onChange={(e) => { setProblem(e.target.value); setSubtype(""); }} required>
+            <option value="">-- Select Problem --</option>
+            {problemOptions.map((p, i) => (
+              <option key={i} value={p.label}>{p.label}</option>
+            ))}
+          </select>
 
-          {/* Priority */}
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="p-3 rounded bg-transparent border border-gray-400 text-white"
-            required
-          >
+          <select value={subtype} onChange={(e) => setSubtype(e.target.value)} required>
+            <option value="">-- Select Subtype --</option>
+            {problemOptions.find((p) => p.label === problem)?.subtypes.map((st, i) => (
+              <option key={i} value={st}>{st}</option>
+            ))}
+          </select>
+
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} required>
             <option value="">Select Priority</option>
             <option>Low</option>
             <option>Medium</option>
             <option>High</option>
           </select>
 
-          {/* Description */}
           <textarea
             placeholder="Description"
-            className="p-3 rounded bg-transparent border border-gray-400 text-white"
-            rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
           />
 
-          {/* ✅ Name & Auto-filled editable Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              type="text"
-              placeholder="Your Name"
-              className="p-3 rounded bg-transparent border border-gray-400 text-white"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="Phone (10 digits)"
-              className="p-3 rounded bg-transparent border border-gray-400 text-white"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              maxLength={10}
-              required
-            />
-          </div>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            required
+          />
 
-          {/* Area */}
-          <div className="flex items-center justify-between gap-2">
-            <input
-              type="text"
-              placeholder="Area / Locality"
-              className="p-3 rounded bg-transparent border border-gray-400 text-white flex-1"
-              value={area}
-              onChange={handleAreaChange}
-              required
-              disabled={useCurrentLocation}
-            />
-            <label className="flex items-center gap-1 text-sm">
-              <input type="checkbox" checked={useCurrentLocation} onChange={handleLocationCheckbox} />
-              Use current location
-            </label>
-          </div>
+          <input
+            type="text"
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            disabled={useCurrentLocation}
+            required
+          />
 
-          {lat && lng && (
-            <span className="text-sm ml-auto text-gray-300">
-              Lat: {lat.toFixed(4)}, Lng: {lng.toFixed(4)}
-            </span>
-          )}
+          <label>
+            <input type="checkbox" checked={useCurrentLocation} onChange={handleLocationCheckbox} />
+            Use current location
+          </label>
 
-          {/* Photo Upload */}
-          <div>
-            <label className="block font-semibold mb-1">Upload / Capture Photo (Mandatory)</label>
-            <div className="flex gap-3 items-center mb-3">
-              <input type="file" accept="image/*" onChange={handleFile} className="hidden" id="fileInput"/>
-              <button
-                type="button"
-                className="px-3 py-2 bg-yellow-400 text-black rounded flex items-center gap-2"
-                onClick={() => document.getElementById("fileInput").click()}
-              >
-                <FaUpload/> Upload
-              </button>
-              {!streaming ? (
-                <button
-                  type="button"
-                  className="px-3 py-2 bg-yellow-400 text-black rounded flex items-center gap-2"
-                  onClick={startCamera}
-                >
-                  <FaCamera/> Open Camera
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="px-3 py-2 bg-green-600 text-white rounded"
-                  onClick={capturePhoto}
-                >
-                  Capture
-                </button>
-              )}
-              {streaming && (
-                <button type="button" className="px-3 py-2 border rounded text-white" onClick={stopCamera}>
-                  Stop
-                </button>
-              )}
-            </div>
-            <video ref={videoRef} className="w-full rounded border mb-2" style={{display: streaming ? 'block' : 'none'}} />
-            <canvas ref={canvasRef} style={{display: 'none'}} />
-            {photoData ? (
-              <img src={photoData} alt="preview" className="w-full rounded border"/>
-            ) : (
-              <div className="w-full h-40 rounded border flex items-center justify-center text-gray-400">
-                No photo yet
-              </div>
-            )}
-          </div>
+          <input type="file" accept="image/*" onChange={handleFile} required />
 
-          <button
-            type="submit"
-            className="px-6 py-3 bg-yellow-400 text-black rounded-full font-bold hover:scale-105 transition"
-          >
+          <button type="submit" className="bg-yellow-400 text-black font-bold p-3 rounded">
             Submit Report
           </button>
+
         </form>
       </section>
     </div>
