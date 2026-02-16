@@ -1,13 +1,13 @@
 // frontend/src/pages/User/ReportForm.jsx
-
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaCamera, FaUpload } from "react-icons/fa";
 import BubblesBackground from "../../components/BubblesBackground";
-import { API_BASE_URL } from "../../config";   // ✅ USE CONFIG
+import { API_BASE_URL } from "../../config";
 
 export default function ReportForm() {
   const navigate = useNavigate();
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -30,12 +30,9 @@ export default function ReportForm() {
     { label: "Street Lights", subtypes: ["Not working", "Flickering", "Broken pole"] },
     { label: "Water Leakage", subtypes: ["Drainage", "Water management", "Plumbing"] },
     { label: "Trees", subtypes: ["Fallen tree", "Disease", "Obstruction"] },
-    { label: "Potholes", subtypes: ["Small", "Medium", "Large"] },
-    { label: "Traffic Congestion", subtypes: ["Peak hours", "Accident prone area", "Signal issues"] },
-    { label: "Public Amenities", subtypes: ["Benches", "Public toilets", "Bus shelters"] },
+    { label: "Potholes", subtypes: ["Small", "Medium", "Large"] }
   ];
 
-  // Load logged user
   useEffect(() => {
     const cur = JSON.parse(localStorage.getItem("spotnsort_current_user"));
     if (!cur) {
@@ -47,39 +44,63 @@ export default function ReportForm() {
     }
   }, [navigate]);
 
+  // ===== LOCATION =====
+  const handleLocationCheckbox = async () => {
+    if (!navigator.geolocation) return alert("Geolocation not supported");
+
+    if (!useCurrentLocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(pos.coords.latitude);
+          setLng(pos.coords.longitude);
+          setArea(`Lat: ${pos.coords.latitude}, Lng: ${pos.coords.longitude}`);
+          setUseCurrentLocation(true);
+        },
+        () => alert("Unable to fetch location")
+      );
+    } else {
+      setUseCurrentLocation(false);
+      setLat(null);
+      setLng(null);
+      setArea("");
+    }
+  };
+
+  // ===== CAMERA =====
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+      setStreaming(true);
+    } catch {
+      alert("Camera access denied");
+    }
+  };
+
+  const capturePhoto = () => {
+    const ctx = canvasRef.current.getContext("2d");
+    canvasRef.current.width = videoRef.current.videoWidth;
+    canvasRef.current.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
+    const image = canvasRef.current.toDataURL("image/jpeg");
+    setPhotoData(image);
+
+    videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+    setStreaming(false);
+  };
+
   const handleFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
     const reader = new FileReader();
     reader.onload = () => setPhotoData(reader.result);
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(e.target.files[0]);
   };
 
-  const handleLocationCheckbox = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLat(pos.coords.latitude);
-        setLng(pos.coords.longitude);
-        setArea(
-          `Lat: ${pos.coords.latitude.toFixed(5)}, Lng: ${pos.coords.longitude.toFixed(5)}`
-        );
-        setUseCurrentLocation(true);
-      },
-      () => alert("Location permission denied.")
-    );
-  };
-
+  // ===== SUBMIT =====
   const submit = async (e) => {
     e.preventDefault();
 
     if (!problem || !subtype || !priority || !description || !area || !photoData) {
-      alert("Please fill all required fields.");
-      return;
+      return alert("Please fill all required fields");
     }
 
     const newReport = {
@@ -93,29 +114,22 @@ export default function ReportForm() {
       area,
       lat,
       lng,
-      photo: photoData,
+      photo: photoData
     };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/reports`, {   // ✅ FIXED
+      const res = await fetch(`${API_BASE_URL}/reports`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newReport),
+        body: JSON.stringify(newReport)
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error(data);
-        throw new Error("Failed to submit report");
-      }
+      if (!res.ok) throw new Error();
 
       alert("Report submitted successfully!");
       navigate("/user/home");
-
-    } catch (err) {
-      console.error("Report error:", err);
-      alert("Error submitting report.");
+    } catch {
+      alert("Error submitting report");
     }
   };
 
@@ -123,10 +137,10 @@ export default function ReportForm() {
     <div className="relative min-h-screen text-white">
       <BubblesBackground />
 
-      <section className="pt-32 pb-24 px-6 w-full max-w-3xl mx-auto">
-        <form onSubmit={submit} className="flex flex-col gap-4 bg-white bg-opacity-10 p-8 rounded-2xl">
+      <div className="pt-28 px-6 max-w-3xl mx-auto">
+        <form onSubmit={submit} className="flex flex-col gap-4">
 
-          <select value={problem} onChange={(e) => setProblem(e.target.value)} required>
+          <select value={problem} onChange={(e) => { setProblem(e.target.value); setSubtype(""); }} required>
             <option value="">Select Problem</option>
             {problemOptions.map((p, i) => (
               <option key={i} value={p.label}>{p.label}</option>
@@ -135,13 +149,13 @@ export default function ReportForm() {
 
           <select value={subtype} onChange={(e) => setSubtype(e.target.value)} required>
             <option value="">Select Subtype</option>
-            {problemOptions.find((p) => p.label === problem)?.subtypes.map((st, i) => (
-              <option key={i} value={st}>{st}</option>
+            {problemOptions.find((p) => p.label === problem)?.subtypes.map((s, i) => (
+              <option key={i}>{s}</option>
             ))}
           </select>
 
           <select value={priority} onChange={(e) => setPriority(e.target.value)} required>
-            <option value="">Priority</option>
+            <option value="">Select Priority</option>
             <option>Low</option>
             <option>Medium</option>
             <option>High</option>
@@ -156,42 +170,43 @@ export default function ReportForm() {
 
           <input
             type="text"
-            placeholder="Your Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <input
-            type="tel"
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
-
-          <input
-            type="text"
             placeholder="Area"
             value={area}
             onChange={(e) => setArea(e.target.value)}
+            disabled={useCurrentLocation}
             required
           />
 
           <label>
-            <input type="checkbox" onChange={handleLocationCheckbox} />
+            <input type="checkbox" checked={useCurrentLocation} onChange={handleLocationCheckbox} />
             Use Current Location
           </label>
 
-          <input type="file" accept="image/*" onChange={handleFile} required />
+          {/* PHOTO */}
+          <div className="flex gap-3">
+            <input type="file" accept="image/*" onChange={handleFile} hidden id="fileInput" />
+            <button type="button" onClick={() => document.getElementById("fileInput").click()}>
+              <FaUpload /> Upload
+            </button>
+            {!streaming ? (
+              <button type="button" onClick={startCamera}>
+                <FaCamera /> Camera
+              </button>
+            ) : (
+              <button type="button" onClick={capturePhoto}>
+                Capture
+              </button>
+            )}
+          </div>
 
-          {photoData && <img src={photoData} alt="preview" className="w-full rounded" />}
+          <video ref={videoRef} autoPlay style={{ display: streaming ? "block" : "none" }} />
+          <canvas ref={canvasRef} style={{ display: "none" }} />
 
-          <button type="submit" className="bg-yellow-400 text-black p-3 rounded">
-            Submit Report
-          </button>
+          {photoData && <img src={photoData} alt="preview" />}
 
+          <button type="submit">Submit Report</button>
         </form>
-      </section>
+      </div>
     </div>
   );
 }
