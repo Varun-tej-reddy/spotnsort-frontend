@@ -1,19 +1,17 @@
-// src/services/api.js
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 
-// Existing
 export const getAssignedReports = async () => {
-  const res = await axios.get("/api/authority/reports");
+  const res = await axios.get(`${API_BASE_URL}/reports`);
   return res.data;
 };
 
-export const updateReport = async (id, status) => {
-  const res = await axios.put(`/api/authority/reports/${id}`, { status });
+export const updateReport = async (id, data) => {
+  const res = await axios.put(`${API_BASE_URL}/reports/${id}`, data);
   return res.data;
 };
 
-// 👇 ADD THIS FOR USER REPORTS
 export const getUserReports = async () => {
-  const res = await axios.get("/api/user/reports");
+  const res = await axios.get(`${API_BASE_URL}/reports`);
   return res.data;
 };
